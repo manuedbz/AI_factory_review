@@ -37,16 +37,13 @@ jobs:
       - name: Connexion à l'ACR
         run: az acr login --name "$ACR_NAME"
 
-      # Génère .npmrc (registre privé + FontAwesome) comme les pipelines Urbasolar
-      - name: Préparer l'accès aux registres npm privés
-        uses: urbasolar/common-pipelines/.github/actions/create-npmrc-read-config@main
-        with:
-          repo_github_app_id: ${{ vars.REPO_CONTENTS_RETRIEVER_GITHUB_APP_ID }}
-          repo_app_github_private_key: ${{ secrets.REPO_CONTENTS_RETRIEVER_GITHUB_APP_PRIVATE_KEY }}
-          npm_registry_private_group_token_r: ${{ secrets.NPM_REGISTRY_PRIVATE_GROUP_TOKEN_R }}
-          npm_registry_private_group: ${{ vars.NPM_REGISTRY_PRIVATE_GROUP }}
-          npm_registry_public_fontawesome_token_r: ${{ secrets.NPM_REGISTRY_PUBLIC_FONTAWESOME_TOKEN_R }}
-          npm_registry_public_fontawesome: ${{ vars.NPM_REGISTRY_PUBLIC_FONTAWESOME }}
+      # Jetons npm lus dans le Key Vault de la factory (l'identité OIDC a le rôle Secrets User)
+      - name: Préparer l'accès au registre npm privé
+        env:
+          FACTORY_KV: ${{ vars.FACTORY_KEY_VAULT }}
+        run: |
+          umask 077
+          az keyvault secret show --vault-name "$FACTORY_KV" --name npm-npmrc --query value -o tsv > .npmrc
 
       - name: Build et push de l'image
         run: |
@@ -64,11 +61,4 @@ jobs:
           az containerapp update \
             --name "$CONTAINER_APP" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE" \
-            --set-env-vars \
-              VITE_ENABLE_AUTH="${{ vars.VITE_ENABLE_AUTH }}" \
-              VITE_TENANT_ID="${{ vars.VITE_TENANT_ID }}" \
-              VITE_FRONT_CLIENT_ID="${{ vars.VITE_FRONT_CLIENT_ID }}" \
-              VITE_API_CLIENT_ID="${{ vars.VITE_API_CLIENT_ID }}" \
-              VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
-              VITE_REDIRECT_URI="${{ vars.VITE_REDIRECT_URI }}"
+            --image "$IMAGE"

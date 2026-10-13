@@ -49,13 +49,20 @@ Dossier `templates/front/` de ce repo, à copier à la racine du template :
 | `.dockerignore` | Exclut `node_modules`, `.env*`, docs |
 | `.github/workflows/deploy.yml` | Connexion OIDC, build/push ACR, `az containerapp update` |
 
-Variables à poser dans l'environnement GitHub `dev` : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `AZURE_RESOURCE_GROUP`, `CONTAINER_APP_NAME`, et les `VITE_*` (`VITE_ENABLE_AUTH`, `VITE_TENANT_ID`, `VITE_FRONT_CLIENT_ID`, `VITE_API_CLIENT_ID`, `VITE_API_BASE_URL`, `VITE_REDIRECT_URI`).
+Variables à poser dans l'environnement GitHub `dev` (posées par `scripts/create-github-repo.sh`) : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `AZURE_RESOURCE_GROUP`, `CONTAINER_APP_NAME`, `FACTORY_KEY_VAULT`. Les `VITE_*` viennent du Key Vault de l'app.
 
-**Registre npm privé** : le `yarn.lock` pointe vers le Nexus Urbasolar, sans `.npmrc` dans le repo. Comme `monitor-front`, le workflow réutilise l'action `urbasolar/common-pipelines/.../create-npmrc-read-config` (secrets/variables d'organisation : `REPO_CONTENTS_RETRIEVER_GITHUB_APP_*`, `NPM_REGISTRY_PRIVATE_GROUP*`, `NPM_REGISTRY_PUBLIC_FONTAWESOME*`). Le `.npmrc` est passé au build en secret BuildKit (jamais dans l'image, contrairement à `COPY .npmrc` de monitor-front) et exclu par `.dockerignore`.
+**Principe : pas de `.env`, pas de config dans GitHub.** La config et les secrets vivent dans Azure Key Vault ; GitHub ne garde que de quoi se connecter.
 
-**Configuration runtime** : les `VITE_*` d'auth/API ne sont plus des `--build-arg` ; le workflow les pose en variables d'environnement de la Container App (`az containerapp update --set-env-vars`). Limite : le remplacement se fait une fois par conteneur (un redémarrage garde les valeurs ; un changement de variable crée une révision).
+| Où | Comment |
+|---|---|
+| Container App (dev/prod) | Module `app` : `config` (non secret, valeur dans Terraform) et `secret_names` (valeur posée à part). Chaque entrée devient un secret du KV de l'app (`VITE_TENANT_ID` -> `vite-tenant-id`), référencé par la Container App via une identité managée, injecté en variable d'environnement. `40-runtime-env.sh` les applique au bundle au démarrage |
+| Poste de dev | `eval "$(scripts/dev-env.sh kv-frc-dev-report)" && yarn dev` (après `az login`) : variables exportées dans le shell, rien écrit sur disque |
+| Poser un secret | `scripts/set-secret.sh <keyvault> <VARIABLE>` (valeur saisie sans écho, hors state Terraform) |
+| Pipeline | Connexion OIDC, puis lecture du `.npmrc` dans le KV de la factory (secret `npm-npmrc`, rôle Secrets User donné à l'App Registration). Variables GitHub restantes, non secrètes : `AZURE_*`, `ACR_NAME`, `CONTAINER_APP_NAME`, `FACTORY_KEY_VAULT` |
 
-Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **build Docker local avec secret npmrc, nginx (200, gzip), injection runtime des variables (caractères spéciaux inclus, 0 marqueur restant)**. **Non vérifié** : workflow sur GitHub, accès des runners GitHub au registre npm et à la GitHub App (secrets d'organisation à rendre disponibles au repo). Derrière WARP, le build local nécessite le certificat Cloudflare dans l'image (test uniquement, pas dans le template).
+Limites : le KV de l'app est en accès public (RBAC) car la Container App, Terraform et les postes de dev l'atteignent par le réseau public ; à revoir avec un VNet pour la prod. Un secret modifié est relu par la Container App avec un délai (redémarrer la révision pour l'appliquer tout de suite). Les `VITE_*` d'un front sont publics par nature. Le `.npmrc` du KV contient les jetons du registre privé uniquement (pas FontAwesome). On n'utilise plus l'action `common-pipelines/create-npmrc-read-config`.
+
+Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **build Docker local avec secret npmrc, nginx (200, gzip), injection runtime des variables (caractères spéciaux inclus, 0 marqueur restant)**. **Non vérifié** : workflow sur GitHub, lecture du KV et accès au registre npm depuis un runner GitHub, `az containerapp update` avec identités utilisateur (droit d'assigner l'identité à vérifier), workflow sur GitHub. Derrière WARP, le build local nécessite le certificat Cloudflare dans l'image (test uniquement, pas dans le template).
 
 ## Ce que l'usine crée côté GitHub
 

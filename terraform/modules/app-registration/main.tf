@@ -39,6 +39,12 @@ variable "acr_id" {
   description = "Id de l'ACR où le pipeline pousse les images (rôle AcrPush)."
 }
 
+variable "secrets_kv_id" {
+  type        = string
+  description = "Key Vault de la factory que le pipeline lit (jetons npm...) : rôle Key Vault Secrets User. null = aucun."
+  default     = null
+}
+
 variable "deploy_scope_ids" {
   type        = list(string)
   description = "Ressources que le pipeline peut déployer (rôle Contributor), ex: ids des Container Apps."
@@ -73,6 +79,14 @@ resource "azuread_application_federated_identity_credential" "github" {
 resource "azurerm_role_assignment" "acr_push" {
   scope                = var.acr_id
   role_definition_name = "AcrPush"
+  principal_id         = azuread_service_principal.this.object_id
+}
+
+resource "azurerm_role_assignment" "read_factory_kv" {
+  count = var.secrets_kv_id != null ? 1 : 0
+
+  scope                = var.secrets_kv_id
+  role_definition_name = "Key Vault Secrets User"
   principal_id         = azuread_service_principal.this.object_id
 }
 

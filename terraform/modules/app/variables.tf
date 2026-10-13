@@ -72,8 +72,9 @@ variable "external_ingress" {
 }
 
 variable "kv_public_access" {
-  type    = bool
-  default = false
+  type        = bool
+  description = "Les références Key Vault de la Container App, Terraform et les postes de dev passent par le réseau public (protégé par RBAC) : true requis pour config/secret_names."
+  default     = false
 }
 
 variable "dns" {
@@ -97,4 +98,16 @@ variable "acr" {
   })
   description = "ACR privé d'où l'app tire son image. null = pas de registry (image publique)."
   default     = null
+}
+
+variable "config" {
+  type        = map(string)
+  description = "Configuration NON secrète (ex: VITE_TENANT_ID) : écrite dans le Key Vault et injectée en variable d'environnement. Valeurs visibles dans le state."
+  default     = {}
+}
+
+variable "secret_names" {
+  type        = set(string)
+  description = "Noms de variables secrètes (ex: DB_PASSWORD) : un secret vide est créé dans le Key Vault, la valeur se pose hors Terraform (scripts/set-secret.sh) et reste hors du state."
+  default     = []
 }

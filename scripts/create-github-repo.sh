@@ -19,7 +19,6 @@ source "$ROOT/scripts/load-env.sh" >/dev/null
 OUT=$(terraform -chdir="$TF_DIR" output -json app)
 get() { echo "$OUT" | python3 -c "import sys,json;print(json.load(sys.stdin)['$1'])"; }
 
-FQDN=$(get fqdn)
 # Paires NOM=valeur (compatible bash 3.2 de macOS : pas de tableaux associatifs)
 VARS=(
   "AZURE_CLIENT_ID=$(get client_id)"
@@ -28,8 +27,7 @@ VARS=(
   "ACR_NAME=$(get acr_name)"
   "AZURE_RESOURCE_GROUP=$(get rg_name)"
   "CONTAINER_APP_NAME=$(get name)"
-  "VITE_ENABLE_AUTH=false"
-  "VITE_REDIRECT_URI=https://$FQDN"
+  "FACTORY_KEY_VAULT=${AI_FACTORY_KV:-kv-frc-sbx-aifactory}"
 )
 
 if gh repo view "$REPO" >/dev/null 2>&1; then

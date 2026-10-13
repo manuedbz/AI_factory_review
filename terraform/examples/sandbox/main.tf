@@ -88,6 +88,11 @@ module "acr" {
   tags    = { CreatedBy = "terraform" }
 }
 
+data "azurerm_key_vault" "factory" {
+  name                = "kv-frc-sbx-aifactory"
+  resource_group_name = "rg-ai-factory-core"
+}
+
 module "app" {
   source = "../../modules/app"
   providers = {
@@ -105,6 +110,15 @@ module "app" {
     login_server = module.acr.login_server
   }
 
+  # Config et secrets dans le Key Vault de l'app, injectés dans la Container App
+  kv_public_access = true
+  config = {
+    VITE_ENABLE_AUTH  = "false"
+    VITE_TENANT_ID    = var.tenant_id
+    VITE_REDIRECT_URI = "https://report-dev.wittygrass-b2c8f4a9.francecentral.azurecontainerapps.io"
+  }
+  secret_names = ["VITE_FRONT_CLIENT_ID", "VITE_API_CLIENT_ID"]
+
   # dns = { zone_name = "<zone privée>", rg_name = "rg-dns" }  # à activer quand la zone est choisie
 }
 
@@ -117,6 +131,7 @@ module "app_registration" {
   environments      = ["dev"]
   acr_id            = module.acr.id
   deploy_scope_ids  = [module.app.id]
+  secrets_kv_id     = data.azurerm_key_vault.factory.id
 }
 
 output "app" {

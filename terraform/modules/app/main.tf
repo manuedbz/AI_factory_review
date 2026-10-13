@@ -3,6 +3,11 @@ data "azurerm_client_config" "current" {}
 locals {
   app_name = "${var.name}-${var.env}"
   tags     = merge({ CreatedBy = "terraform", App = var.name, Env = var.env }, var.tags)
+
+  # Variable d'environnement -> nom de secret Key Vault (pas de "_" autorisé)
+  env_names = toset(concat(keys(var.config), tolist(var.secret_names)))
+  kv_secret = { for n in local.env_names : n => lower(replace(n, "_", "-")) }
+  use_ident = var.acr != null || length(local.env_names) > 0
 }
 
 # ---------------------------------------------------------------
@@ -32,7 +37,7 @@ resource "azurerm_key_vault" "this" {
 # Container App (une identité système n'existe qu'après sa création)
 # ---------------------------------------------------------------
 resource "azurerm_user_assigned_identity" "pull" {
-  count = var.acr != null ? 1 : 0
+  count = local.use_ident ? 1 : 0
 
   name                = "id-${local.app_name}-acrpull"
   location            = var.location
@@ -53,6 +58,52 @@ resource "azurerm_role_assignment" "acr_pull" {
 }
 
 # ---------------------------------------------------------------
+# Configuration et secrets dans le Key Vault, injectés dans la Container App
+# ---------------------------------------------------------------
+resource "azurerm_role_assignment" "deployer_kv" {
+  count = length(local.env_names) > 0 ? 1 : 0
+
+  scope                = azurerm_key_vault.this.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_role_assignment" "ident_reads_kv" {
+  count = length(local.env_names) > 0 ? 1 : 0
+
+  scope                = azurerm_key_vault.this.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_user_assigned_identity.pull[0].principal_id
+}
+
+resource "azurerm_key_vault_secret" "config" {
+  for_each = var.config
+
+  name         = local.kv_secret[each.key]
+  value        = each.value
+  key_vault_id = azurerm_key_vault.this.id
+  content_type = "config"
+
+  depends_on = [azurerm_role_assignment.deployer_kv]
+}
+
+resource "azurerm_key_vault_secret" "secret" {
+  for_each = var.secret_names
+
+  name         = local.kv_secret[each.key]
+  value        = "a-definir"
+  key_vault_id = azurerm_key_vault.this.id
+  content_type = "secret"
+
+  depends_on = [azurerm_role_assignment.deployer_kv]
+
+  # La vraie valeur est posée hors Terraform
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+# ---------------------------------------------------------------
 # Container App
 # ---------------------------------------------------------------
 resource "azurerm_container_app" "this" {
@@ -62,8 +113,17 @@ resource "azurerm_container_app" "this" {
   revision_mode                = "Single"
 
   identity {
-    type         = var.acr != null ? "SystemAssigned, UserAssigned" : "SystemAssigned"
-    identity_ids = var.acr != null ? [azurerm_user_assigned_identity.pull[0].id] : null
+    type         = local.use_ident ? "SystemAssigned, UserAssigned" : "SystemAssigned"
+    identity_ids = local.use_ident ? [azurerm_user_assigned_identity.pull[0].id] : null
+  }
+
+  dynamic "secret" {
+    for_each = local.kv_secret
+    content {
+      name                = secret.value
+      identity            = azurerm_user_assigned_identity.pull[0].id
+      key_vault_secret_id = "${azurerm_key_vault.this.vault_uri}secrets/${secret.value}"
+    }
   }
 
   dynamic "registry" {
@@ -92,6 +152,13 @@ resource "azurerm_container_app" "this" {
         name  = "KEY_VAULT_URI"
         value = azurerm_key_vault.this.vault_uri
       }
+      dynamic "env" {
+        for_each = local.kv_secret
+        content {
+          name        = env.key
+          secret_name = env.value
+        }
+      }
     }
   }
 
@@ -107,7 +174,12 @@ resource "azurerm_container_app" "this" {
 
   tags = local.tags
 
-  depends_on = [azurerm_role_assignment.acr_pull]
+  depends_on = [
+    azurerm_role_assignment.acr_pull,
+    azurerm_role_assignment.ident_reads_kv,
+    azurerm_key_vault_secret.config,
+    azurerm_key_vault_secret.secret,
+  ]
 
   lifecycle {
     # Image : mise à jour ensuite par le pipeline de déploiement. Tags : ajoutés par les policies Azure
