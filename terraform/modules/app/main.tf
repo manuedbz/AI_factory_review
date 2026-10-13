@@ -21,6 +21,10 @@ resource "azurerm_key_vault" "this" {
   public_network_access_enabled = var.kv_public_access
 
   tags = local.tags
+
+  lifecycle {
+    ignore_changes = [tags["createdAt"], tags["updatedAt"], tags["env"], tags["Env"]]
+  }
 }
 
 # ---------------------------------------------------------------
@@ -70,8 +74,8 @@ resource "azurerm_container_app" "this" {
   tags = local.tags
 
   lifecycle {
-    # L'image est ensuite mise à jour par le pipeline de déploiement
-    ignore_changes = [template[0].container[0].image]
+    # Image : mise à jour ensuite par le pipeline de déploiement. Tags : ajoutés par les policies Azure
+    ignore_changes = [template[0].container[0].image, tags["createdAt"], tags["updatedAt"], tags["env"], tags["Env"]]
   }
 }
 

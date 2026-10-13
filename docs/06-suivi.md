@@ -22,18 +22,18 @@ Légende : ✅ fait · 🔄 en cours · ⬜ à faire
 | ✅ | Enregistrement DNS (CNAME privé, optionnel) |
 | ✅ | `terraform validate` |
 | ⬜ | Choix de la zone DNS privée |
-| ⬜ | `plan` puis `apply` sur SandBox |
+| ⬜ | `plan` puis `apply` de `terraform/examples/sandbox` |
 
 ## Key Vault de la factory (SandBox)
 
 | Statut | Tâche |
 |---|---|
-| ✅ | Bootstrap Terraform (`terraform/bootstrap`) : `rg-ai-factory-core` + `kv-frc-sbx-aifactory` créés |
-| 🚫 | Rôle « Key Vault Secrets Officer » : refusé (403, pas de droit `roleAssignments/write` sur SandBox) |
-| ⬜ | Alimenter le KV : `scripts/seed-kv.sh <dns-subscription-id>` |
-| ⬜ | Charger les variables : `source scripts/load-env.sh` |
+| ✅ | Bootstrap Terraform (`terraform/bootstrap`) : `rg-ai-factory-core` + `kv-frc-sbx-aifactory` |
+| ✅ | Droit RBAC Administrator obtenu, rôle « Key Vault Secrets Officer » attribué |
+| ✅ | KV alimenté (`scripts/seed-kv.sh`) : tenant, souscription SandBox, souscription DNS |
+| ✅ | Chargement des variables (`source scripts/load-env.sh`) testé |
 
-Impact : le module `app` crée aussi un role assignment (accès de l'app à son Key Vault). Il échouera pareil tant que le droit manque.
+Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CERTIFICATE_VERIFY_FAILED`) si `REQUESTS_CA_BUNDLE` ne contient pas le certificat Cloudflare. Pointer vers un bundle qui l'inclut.
 
 ## Côté GitHub
 

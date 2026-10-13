@@ -27,6 +27,11 @@ resource "azurerm_resource_group" "core" {
   name     = "rg-ai-factory-core"
   location = "francecentral"
   tags     = { CreatedBy = "terraform", Project = "ai-factory" }
+
+  # Tags ajoutés par les policies Azure
+  lifecycle {
+    ignore_changes = [tags["createdAt"], tags["updatedAt"], tags["env"], tags["Env"]]
+  }
 }
 
 resource "azurerm_key_vault" "factory" {
@@ -42,6 +47,10 @@ resource "azurerm_key_vault" "factory" {
   public_network_access_enabled = true # lecture depuis les postes de dev (sandbox)
 
   tags = { CreatedBy = "terraform", Project = "ai-factory" }
+
+  lifecycle {
+    ignore_changes = [tags["createdAt"], tags["updatedAt"], tags["env"], tags["Env"]]
+  }
 }
 
 # L'utilisateur qui déploie peut gérer les secrets
