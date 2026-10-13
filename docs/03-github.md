@@ -43,14 +43,19 @@ Dossier `templates/front/` de ce repo, à copier à la racine du template :
 
 | Fichier | Rôle |
 |---|---|
-| `Dockerfile` | Build Vite (`yarn build`) puis nginx |
-| `nginx.conf` | Routage SPA, cache long sur `/assets/`, pas de cache sur `index.html` |
+| `Dockerfile` | Build Vite (`yarn build`) puis nginx ; le `.npmrc` est monté en secret BuildKit |
+| `40-runtime-env.sh` | Au démarrage du conteneur, remplace les marqueurs `__RUNTIME_VITE_*__` du bundle par les variables d'environnement : **une seule image pour dev et prod** (sans modifier le code du template) |
+| `nginx.conf` | Routage SPA, gzip, cache long sur `/assets/`, pas de cache sur `index.html` |
 | `.dockerignore` | Exclut `node_modules`, `.env*`, docs |
 | `.github/workflows/deploy.yml` | Connexion OIDC, build/push ACR, `az containerapp update` |
 
 Variables à poser dans l'environnement GitHub `dev` : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `AZURE_RESOURCE_GROUP`, `CONTAINER_APP_NAME`, et les `VITE_*` (`VITE_ENABLE_AUTH`, `VITE_TENANT_ID`, `VITE_FRONT_CLIENT_ID`, `VITE_API_CLIENT_ID`, `VITE_API_BASE_URL`, `VITE_REDIRECT_URI`).
 
-Vérifié : `yarn install --frozen-lockfile` + `yarn build` sur le template, et syntaxe YAML. **Non vérifié** : build de l'image Docker (daemon arrêté), nginx, workflow sur GitHub.
+**Registre npm privé** : le `yarn.lock` pointe vers le Nexus Urbasolar, sans `.npmrc` dans le repo. Comme `monitor-front`, le workflow réutilise l'action `urbasolar/common-pipelines/.../create-npmrc-read-config` (secrets/variables d'organisation : `REPO_CONTENTS_RETRIEVER_GITHUB_APP_*`, `NPM_REGISTRY_PRIVATE_GROUP*`, `NPM_REGISTRY_PUBLIC_FONTAWESOME*`). Le `.npmrc` est passé au build en secret BuildKit (jamais dans l'image, contrairement à `COPY .npmrc` de monitor-front) et exclu par `.dockerignore`.
+
+**Configuration runtime** : les `VITE_*` d'auth/API ne sont plus des `--build-arg` ; le workflow les pose en variables d'environnement de la Container App (`az containerapp update --set-env-vars`). Limite : le remplacement se fait une fois par conteneur (un redémarrage garde les valeurs ; un changement de variable crée une révision).
+
+Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **build Docker local avec secret npmrc, nginx (200, gzip), injection runtime des variables (caractères spéciaux inclus, 0 marqueur restant)**. **Non vérifié** : workflow sur GitHub, accès des runners GitHub au registre npm et à la GitHub App (secrets d'organisation à rendre disponibles au repo). Derrière WARP, le build local nécessite le certificat Cloudflare dans l'image (test uniquement, pas dans le template).
 
 ## Ce que l'usine crée côté GitHub
 

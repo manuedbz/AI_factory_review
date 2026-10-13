@@ -37,27 +37,21 @@ jobs:
       - name: Connexion à l'ACR
         run: az acr login --name "$ACR_NAME"
 
-      - name: Préparer l'accès au registre npm privé
-        env:
-          NPM_REGISTRY_URL: ${{ vars.NPM_REGISTRY_URL }} # ex: //hote/repository/npm-proxy/
-          NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
-        run: |
-          umask 077
-          {
-            echo "${NPM_REGISTRY_URL}:_authToken=${NPM_REGISTRY_TOKEN}"
-            echo "always-auth=true"
-          } > "$RUNNER_TEMP/npmrc"
+      # Génère .npmrc (registre privé + FontAwesome) comme les pipelines Urbasolar
+      - name: Préparer l'accès aux registres npm privés
+        uses: urbasolar/common-pipelines/.github/actions/create-npmrc-read-config@main
+        with:
+          repo_github_app_id: ${{ vars.REPO_CONTENTS_RETRIEVER_GITHUB_APP_ID }}
+          repo_app_github_private_key: ${{ secrets.REPO_CONTENTS_RETRIEVER_GITHUB_APP_PRIVATE_KEY }}
+          npm_registry_private_group_token_r: ${{ secrets.NPM_REGISTRY_PRIVATE_GROUP_TOKEN_R }}
+          npm_registry_private_group: ${{ vars.NPM_REGISTRY_PRIVATE_GROUP }}
+          npm_registry_public_fontawesome_token_r: ${{ secrets.NPM_REGISTRY_PUBLIC_FONTAWESOME_TOKEN_R }}
+          npm_registry_public_fontawesome: ${{ vars.NPM_REGISTRY_PUBLIC_FONTAWESOME }}
 
       - name: Build et push de l'image
         run: |
           docker build \
-            --secret id=npmrc,src="$RUNNER_TEMP/npmrc" \
-            --build-arg VITE_ENABLE_AUTH="${{ vars.VITE_ENABLE_AUTH }}" \
-            --build-arg VITE_TENANT_ID="${{ vars.VITE_TENANT_ID }}" \
-            --build-arg VITE_FRONT_CLIENT_ID="${{ vars.VITE_FRONT_CLIENT_ID }}" \
-            --build-arg VITE_API_CLIENT_ID="${{ vars.VITE_API_CLIENT_ID }}" \
-            --build-arg VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
-            --build-arg VITE_REDIRECT_URI="${{ vars.VITE_REDIRECT_URI }}" \
+            --secret id=npmrc,src=.npmrc \
             --build-arg VITE_BUILD_NUMBER="${{ github.run_number }}" \
             --build-arg VITE_BUILD_COMMIT="${{ github.sha }}" \
             --build-arg VITE_BUILD_BRANCH="${{ github.ref_name }}" \
@@ -70,4 +64,11 @@ jobs:
           az containerapp update \
             --name "$CONTAINER_APP" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE"
+            --image "$IMAGE" \
+            --set-env-vars \
+              VITE_ENABLE_AUTH="${{ vars.VITE_ENABLE_AUTH }}" \
+              VITE_TENANT_ID="${{ vars.VITE_TENANT_ID }}" \
+              VITE_FRONT_CLIENT_ID="${{ vars.VITE_FRONT_CLIENT_ID }}" \
+              VITE_API_CLIENT_ID="${{ vars.VITE_API_CLIENT_ID }}" \
+              VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
+              VITE_REDIRECT_URI="${{ vars.VITE_REDIRECT_URI }}"
