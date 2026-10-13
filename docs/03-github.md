@@ -77,7 +77,7 @@ Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **bui
 | `do-create-release-nodejs` (semantic-release) | Non repris pour l'instant | Nécessite les secrets `VERSION_MANAGER_*` ; l'image est taguée avec le SHA du commit. À ajouter si le versionnement est voulu |
 
 Contraintes :
-- `common-pipelines` est privé et limité aux repos de l'organisation `urbasolar` : ces workflows **ne fonctionnent pas** dans un repo personnel (ex. `manuedbz/report-demo`). Il faut tester dans l'organisation.
+- `common-pipelines` est privé et limité aux repos de l'organisation `urbasolar` : ces workflows **ne fonctionnent pas** dans un repo personnel. Il faut tester dans l'organisation.
 - Ils utilisent le runner `urbasolar-azure-core-runner` et des secrets/variables d'organisation (`NPM_REGISTRY_*`, `REPO_CONTENTS_RETRIEVER_*`). La variable de repo `CI_RUNNER` remplace le runner (attention : `ubuntu-latest` reçoit un 403 du registre npm privé).
 - Le flux de branches diffère : monitor-front déploie `develop` -> dev et `main` -> preprod ; le template déploie `main` -> dev (pas de prod pour le moment).
 - Le lint/les tests ne reçoivent pas la config du KV (pas de connexion Azure) : ils tournent avec les secrets d'organisation, comme monitor-front.

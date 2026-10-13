@@ -54,7 +54,7 @@ Sorties prévues : URL de l'app, id du Key Vault, identité de la Container App.
 
 - **Pas de prod :** seul l'environnement `dev` est géré pour le moment. Le credential fédéré `prod` est retiré de l'exemple (`environments = ["dev"]`).
 - **Droits du pipeline limités à `report-dev` :** le rôle Contributor porte sur cette seule Container App. Ajouter `prod` demandera une app `report-prod` (ou un scope par environnement) et un credential fédéré `prod`.
-- **Repo GitHub fictif :** `manuedbz/report-demo` dans l'exemple. La confiance OIDC dépend du nom exact `owner/repo` : à remplacer par le vrai repo.
+- **Repo GitHub de test :** `urbasolar/report-demo`. La confiance OIDC dépend du préfixe `sub` exact (ids immuables pour les repos récents, variable `github_subject_prefix`).
 - **Une App Registration = pipeline uniquement :** pas encore d'identité de connexion utilisateur (MSAL) ni de redirect URI (voir [03](03-github.md)).
 - **ACR en accès public, gamme Basic :** acceptable en SandBox. Le repo `azure` utilise Premium + private endpoint : à reprendre avant toute migration.
 - **Pas d'image dans l'ACR :** l'app tourne sur l'image de démo Microsoft tant que le pipeline n'existe pas.
