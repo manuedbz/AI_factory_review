@@ -3,8 +3,10 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Le yarn.lock pointe vers le registre npm privé : le .npmrc (avec jeton) est monté
+# en secret BuildKit le temps de l'install, il n'est jamais écrit dans l'image.
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc yarn install --frozen-lockfile
 
 COPY . .
 

@@ -37,9 +37,21 @@ jobs:
       - name: Connexion à l'ACR
         run: az acr login --name "$ACR_NAME"
 
+      - name: Préparer l'accès au registre npm privé
+        env:
+          NPM_REGISTRY_URL: ${{ vars.NPM_REGISTRY_URL }} # ex: //hote/repository/npm-proxy/
+          NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+        run: |
+          umask 077
+          {
+            echo "${NPM_REGISTRY_URL}:_authToken=${NPM_REGISTRY_TOKEN}"
+            echo "always-auth=true"
+          } > "$RUNNER_TEMP/npmrc"
+
       - name: Build et push de l'image
         run: |
           docker build \
+            --secret id=npmrc,src="$RUNNER_TEMP/npmrc" \
             --build-arg VITE_ENABLE_AUTH="${{ vars.VITE_ENABLE_AUTH }}" \
             --build-arg VITE_TENANT_ID="${{ vars.VITE_TENANT_ID }}" \
             --build-arg VITE_FRONT_CLIENT_ID="${{ vars.VITE_FRONT_CLIENT_ID }}" \
