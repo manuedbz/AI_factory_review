@@ -50,7 +50,7 @@ Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CER
 | ✅ | Module `acr` (Basic, admin désactivé, accès par identité) |
 | ✅ | Module `app-registration` (App + SP, credential fédéré GitHub OIDC, AcrPush, Contributor ciblé) |
 | ✅ | Module `app` : identité dédiée AcrPull pour tirer l'image depuis l'ACR |
-| ✅ | `plan` propre (dev + prod) : 9 créations, 1 modification, 0 suppression |
+| ✅ | `plan` propre (dev uniquement) : 8 créations, 1 modification, 0 suppression |
 | ⬜ | `apply` (en attente de validation) |
 | ⬜ | Poser `AZURE_CLIENT_ID` / tenant / souscription dans le repo GitHub |
 
@@ -58,7 +58,9 @@ Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CER
 
 | Statut | Tâche |
 |---|---|
-| ⬜ | Repo template (Next.js + connecteur DB + `agents.md` + `deploy.yml`) |
+| ✅ | Template de départ identifié : `urbasolar/template-urba-front` (analysé, écarts documentés dans 03) |
+| ⬜ | `Dockerfile` + `deploy.yml` pour le template |
+| ⬜ | Décision : une ou deux App Registrations (pipeline / connexion MSAL) |
 | ⬜ | Script de création de repo |
 
 ## Étapes suivantes

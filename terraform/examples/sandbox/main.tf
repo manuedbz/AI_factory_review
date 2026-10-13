@@ -114,7 +114,7 @@ module "app_registration" {
 
   name              = "report"
   github_repository = "manuedbz/report-demo" # repo fictif : seul le nom compte pour la confiance OIDC
-  environments      = ["dev", "prod"]
+  environments      = ["dev"]
   acr_id            = module.acr.id
   deploy_scope_ids  = [module.app.id]
 }

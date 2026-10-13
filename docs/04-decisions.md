@@ -26,3 +26,12 @@ Journal des décisions d'architecture (la plus récente en bas).
 
 ## D-005 - Pas d'identifiants dans le repo
 - **Décision** : repo public, donc aucun identifiant de tenant/souscription/client ni secret dans les fichiers.
+
+## D-006 - Environnements : dev uniquement, pas de prod pour l'instant
+- **Date** : 2026-10-13
+- **Décision** : l'usine ne gère que `dev` ; pas d'identité « Infra ». `prod` viendra plus tard.
+
+## D-007 - Template de départ : template-urba-front
+- **Date** : 2026-10-13
+- **Décision** : utiliser `urbasolar/template-urba-front` comme base, en attendant le template cible de l'usine.
+- **Conséquence** : ajouter Dockerfile et workflow `deploy.yml` (absents du template).
