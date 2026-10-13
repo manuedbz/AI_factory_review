@@ -24,6 +24,17 @@ Légende : ✅ fait · 🔄 en cours · ⬜ à faire
 | ⬜ | Choix de la zone DNS privée |
 | ⬜ | `plan` puis `apply` sur SandBox |
 
+## Key Vault de la factory (SandBox)
+
+| Statut | Tâche |
+|---|---|
+| ✅ | Bootstrap Terraform (`terraform/bootstrap`) : `rg-ai-factory-core` + `kv-frc-sbx-aifactory` créés |
+| 🚫 | Rôle « Key Vault Secrets Officer » : refusé (403, pas de droit `roleAssignments/write` sur SandBox) |
+| ⬜ | Alimenter le KV : `scripts/seed-kv.sh <dns-subscription-id>` |
+| ⬜ | Charger les variables : `source scripts/load-env.sh` |
+
+Impact : le module `app` crée aussi un role assignment (accès de l'app à son Key Vault). Il échouera pareil tant que le droit manque.
+
 ## Côté GitHub
 
 | Statut | Tâche |
