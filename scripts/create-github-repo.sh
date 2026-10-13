@@ -3,7 +3,7 @@
 # main protégée (-> prod, désactivé), fichiers de templates/front/, environnement "dev" et ses variables
 # (valeurs issues des sorties Terraform + Key Vault de la factory).
 #
-# Usage : scripts/create-github-repo.sh <owner/repo> [--dry-run]
+# Usage : [TEMPLATE_REPO=urbasolar/template-next-factory] scripts/create-github-repo.sh <owner/repo> [--dry-run]
 # Pré-requis : gh connecté, az connecté, terraform appliqué dans terraform/examples/sandbox
 set -euo pipefail
 
@@ -47,12 +47,16 @@ else
     gh api "repos/$REPO/contents/package.json" --silent || { echo "Template non copié dans $REPO" >&2; exit 1; }
     gh repo clone "$REPO" "$WORK" -- -q
     git -C "$WORK" checkout -q -b develop
-    cp -R "$ROOT/templates/front/." "$WORK/"
+    # template-next-factory embarque déjà Dockerfile et pipelines ; le front reçoit ceux de templates/front
+    case "$TEMPLATE" in
+      *template-next-factory*) ;;
+      *) cp -R "$ROOT/templates/front/." "$WORK/" ;;
+    esac
     # Le yarn.lock du template pointe vers npm-proxy ; le jeton de lecture des pipelines
     # Urbasolar ne couvre que npm-group (même contenu) : sans cela, 401 au yarn install
     sed -i.bak 's#/repository/npm-proxy/#/repository/npm-group/#g' "$WORK/yarn.lock" && rm -f "$WORK/yarn.lock.bak"
     git -C "$WORK" add -A
-    git -C "$WORK" commit -q -m "feat: add Docker build and Azure deployment pipelines"
+    git -C "$WORK" commit -q --allow-empty -m "feat: add Docker build and Azure deployment pipelines"
     git -C "$WORK" push -q -u origin develop
     gh repo edit "$REPO" --default-branch develop
     # main protégée : PR obligatoire (1 approbation), pas de force-push

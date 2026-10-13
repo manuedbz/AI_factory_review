@@ -4,7 +4,7 @@
 
 Chaque nouvelle app part d'un **repo template GitHub** (étape ② du tableau blanc).
 
-**Base retenue : `urbasolar/template-urba-front`** (privé, marqué *template*). Le template cible du tableau blanc (Next.js + connecteur DB + `agents.md`) reste à créer ; ce template front sert de point de départ.
+**Base retenue : `urbasolar/template-urba-front`** (privé, marqué *template*). Le template Next.js `urbasolar/template-next-factory` (SSR + MUI + API + PWA) est créé ; ce qui lui manquait pour l'usine (Dockerfile, config au runtime, pipelines) est dans la PR [urbasolar/template-next-factory#3](https://github.com/urbasolar/template-next-factory/pull/3). Usage : `TEMPLATE_REPO=urbasolar/template-next-factory scripts/create-github-repo.sh <owner/repo>`, avec `target_port = 3000` dans le module Terraform `app`. Le connecteur DB et `agents.md` du tableau blanc restent à faire.
 
 ### Contenu du template existant
 
