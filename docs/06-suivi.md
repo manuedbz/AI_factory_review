@@ -50,7 +50,7 @@ Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CER
 | ✅ | Module `acr` (Basic, admin désactivé, accès par identité) |
 | ✅ | Module `app-registration` (App + SP, credential fédéré GitHub OIDC, AcrPush, Contributor ciblé) |
 | ✅ | Module `app` : identité dédiée AcrPull pour tirer l'image depuis l'ACR |
-| ✅ | `plan` propre : 8 créations, 1 modification, 0 suppression |
+| ✅ | `plan` propre (dev + prod) : 9 créations, 1 modification, 0 suppression |
 | ⬜ | `apply` (en attente de validation) |
 | ⬜ | Poser `AZURE_CLIENT_ID` / tenant / souscription dans le repo GitHub |
 

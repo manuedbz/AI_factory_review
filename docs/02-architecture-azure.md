@@ -12,7 +12,7 @@ Un seul module, appelé une fois par application et par environnement, qui crée
 
 Ce que le tableau blanc ajoute autour du module (étapes ultérieures) :
 
-- **App Registration** (identité de l'app dans Entra ID) avec trois identités managées : *Dev*, *Prod*, *Infra* (à confirmer).
+- **App Registration** (identité du pipeline GitHub dans Entra ID), avec un credential fédéré OIDC par environnement : **dev** et **prod** uniquement (pas d'identité « Infra », décision du 2026-10-13).
 - **Container Registry (ACR)** pour les images, alimenté par le pipeline de build.
 - **Environnement** : `dev` / `prod` portés par le nom de l'app (ex. `monapp-dev`).
 
@@ -48,7 +48,6 @@ Sorties prévues : URL de l'app, id du Key Vault, identité de la Container App.
 
 - Environnement Container Apps : créé par le module ou fourni en entrée ? (proposition : fourni)
 - Accès privé uniquement, ou ingress public pour certaines apps ?
-- Rôle exact des trois identités « SMI » du tableau blanc.
 - Zone DNS privée exacte à utiliser pour le sandbox.
 
 Voir aussi : [05-terraform-debutant.md](05-terraform-debutant.md).
