@@ -47,7 +47,10 @@ Dossier `templates/front/` de ce repo, à copier à la racine du template :
 | `40-runtime-env.sh` | Au démarrage du conteneur, remplace les marqueurs `__RUNTIME_VITE_*__` du bundle par les variables d'environnement : **une seule image pour dev et prod** (sans modifier le code du template) |
 | `nginx.conf` | Routage SPA, gzip, cache long sur `/assets/`, pas de cache sur `index.html` |
 | `.dockerignore` | Exclut `node_modules`, `.env*`, docs |
-| `.github/workflows/deploy.yml` | Connexion OIDC, build/push ACR, `az containerapp update` |
+| `.github/workflows/deploy.yml` | Lint + tests (workflows partagés), puis connexion OIDC, build/push ACR, `az containerapp update` |
+| `.github/workflows/on-pull-request.yml` | Lint + tests sur les PR vers `main` (`common-pipelines`) |
+| `.github/workflows/pr-title-check.yml` | Contrôle du titre de PR `type(TICKET-123): description` (`common-pipelines`) |
+| `.github/workflows/manual-tests.yml` | Lint/tests à la demande |
 
 Variables à poser dans l'environnement GitHub `dev` (posées par `scripts/create-github-repo.sh`) : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `AZURE_RESOURCE_GROUP`, `CONTAINER_APP_NAME`, `FACTORY_KEY_VAULT`. Les `VITE_*` viennent du Key Vault de l'app.
 
@@ -63,6 +66,21 @@ Variables à poser dans l'environnement GitHub `dev` (posées par `scripts/creat
 Limites : le KV de l'app est en accès public (RBAC) car la Container App, Terraform et les postes de dev l'atteignent par le réseau public ; à revoir avec un VNet pour la prod. Un secret modifié est relu par la Container App avec un délai (redémarrer la révision pour l'appliquer tout de suite). Les `VITE_*` d'un front sont publics par nature. Le `.npmrc` du KV contient les jetons du registre privé uniquement (pas FontAwesome). On n'utilise plus l'action `common-pipelines/create-npmrc-read-config`.
 
 Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **build Docker local avec secret npmrc, nginx (200, gzip), injection runtime des variables (caractères spéciaux inclus, 0 marqueur restant)**. **Non vérifié** : workflow sur GitHub, lecture du KV et accès au registre npm depuis un runner GitHub, `az containerapp update` avec identités utilisateur (droit d'assigner l'identité à vérifier), workflow sur GitHub. Derrière WARP, le build local nécessite le certificat Cloudflare dans l'image (test uniquement, pas dans le template).
+
+## Compatibilité avec les pipelines habituelles (monitor-front / common-pipelines)
+
+| Élément `common-pipelines` | Statut | Pourquoi |
+|---|---|---|
+| `do-lint`, `do-test`, `do-pr-title-check` | **Repris tels quels** | Génériques Node/yarn ; `yarn lint` et `yarn test` existent dans le template |
+| `do-build-docker` | Non repris | Pousse vers un registre avec identifiant/mot de passe SP, et n'accepte pas de secret BuildKit (le Dockerfile du template s'en sert pour le `.npmrc`) |
+| `do-deploy-azure-web-app` | Non repris | Cible les App Service (`app-frc-<env>-<repo>`, secret SP), nous déployons des Container Apps en OIDC |
+| `do-create-release-nodejs` (semantic-release) | Non repris pour l'instant | Nécessite les secrets `VERSION_MANAGER_*` ; l'image est taguée avec le SHA du commit. À ajouter si le versionnement est voulu |
+
+Contraintes :
+- `common-pipelines` est privé et limité aux repos de l'organisation `urbasolar` : ces workflows **ne fonctionnent pas** dans un repo personnel (ex. `manuedbz/report-demo`). Il faut tester dans l'organisation.
+- Ils utilisent le runner `urbasolar-azure-core-runner` et des secrets/variables d'organisation (`NPM_REGISTRY_*`, `REPO_CONTENTS_RETRIEVER_*`). La variable de repo `CI_RUNNER` remplace le runner (ex. `ubuntu-latest`).
+- Le flux de branches diffère : monitor-front déploie `develop` -> dev et `main` -> preprod ; le template déploie `main` -> dev (pas de prod pour le moment).
+- Le lint/les tests ne reçoivent pas la config du KV (pas de connexion Azure) : ils tournent avec les secrets d'organisation, comme monitor-front.
 
 ## Ce que l'usine crée côté GitHub
 

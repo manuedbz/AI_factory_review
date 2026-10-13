@@ -1,0 +1,24 @@
+name: on-pull-request
+run-name: pull-request - CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# Workflows partagés Urbasolar (repo urbasolar/common-pipelines, accessible aux repos de l'organisation).
+# Runner par défaut : celui d'Urbasolar ; la variable de repo CI_RUNNER permet de le remplacer (ex: ubuntu-latest).
+jobs:
+  lint:
+    secrets: inherit
+    uses: urbasolar/common-pipelines/.github/workflows/do-lint.yaml@main
+    with:
+      node-version: 22
+      runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
+
+  test:
+    secrets: inherit
+    uses: urbasolar/common-pipelines/.github/workflows/do-test.yaml@main
+    with:
+      environment: dev
+      node-version: 22
+      runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}

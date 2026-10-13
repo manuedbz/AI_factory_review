@@ -1,0 +1,10 @@
+name: pr-title-check
+run-name: pull-request - Check PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+jobs:
+  pr-title-check:
+    uses: urbasolar/common-pipelines/.github/workflows/do-pr-title-check.yaml@main

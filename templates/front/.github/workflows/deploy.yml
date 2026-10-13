@@ -15,7 +15,24 @@ permissions:
   contents: read
 
 jobs:
+  # Mêmes contrôles que monitor-front (workflows partagés Urbasolar) avant de déployer
+  lint:
+    secrets: inherit
+    uses: urbasolar/common-pipelines/.github/workflows/do-lint.yaml@main
+    with:
+      node-version: 22
+      runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
+
+  test:
+    secrets: inherit
+    uses: urbasolar/common-pipelines/.github/workflows/do-test.yaml@main
+    with:
+      environment: dev
+      node-version: 22
+      runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
+
   deploy:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     environment: dev
     env:
