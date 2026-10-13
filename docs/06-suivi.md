@@ -21,8 +21,16 @@ Légende : ✅ fait · 🔄 en cours · ⬜ à faire
 | ✅ | Container App (+ environnement dans l'exemple sandbox) |
 | ✅ | Enregistrement DNS (CNAME privé, optionnel) |
 | ✅ | `terraform validate` |
-| ⬜ | Choix de la zone DNS privée |
+| 🚫 | DNS : bloqué, voir ci-dessous |
 | ⬜ | `plan` puis `apply` de `terraform/examples/sandbox` |
+
+## Blocage DNS
+
+- Le compte de travail n'a pas accès à la souscription **IT-Management** (zone DNS privée dans `rg-dns`) : le provider `azurerm.dns` ne peut pas s'authentifier.
+- Il manque aussi un rôle d'écriture sur la zone (ex. « Private DNS Zone Contributor ») et le choix de la zone (aucune zone applicative dans `rg-dns`).
+- Le CNAME ne suffit pas : pour répondre sous ce nom, la Container App a besoin d'un domaine personnalisé et d'un certificat (non géré par le module).
+- Contournement : `dns = null` (défaut). Les apps sont joignables par leur adresse native.
+- À faire : accès IT-Management + rôle, zone retenue, domaine personnalisé.
 
 ## Key Vault de la factory (SandBox)
 
