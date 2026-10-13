@@ -147,3 +147,53 @@ output "app" {
     rg_name       = azurerm_resource_group.this.name
   }
 }
+
+# --- App Next.js de test (template urbasolar/template-next-factory) ---
+module "app_next" {
+  source = "../../modules/app"
+  providers = {
+    azurerm     = azurerm
+    azurerm.dns = azurerm.dns
+  }
+
+  name                         = "next"
+  env                          = "dev"
+  rg_name                      = azurerm_resource_group.this.name
+  container_app_environment_id = azurerm_container_app_environment.this.id
+  external_ingress             = true
+  target_port                  = 3000 # next start ; l'image de démo (port 80) ne répond pas avant le 1er déploiement
+  acr = {
+    id           = module.acr.id
+    login_server = module.acr.login_server
+  }
+
+  kv_public_access = true
+  config = {
+    NEXT_PUBLIC_APP_NAME = "Next demo"
+  }
+}
+
+module "app_registration_next" {
+  source = "../../modules/app-registration"
+
+  name              = "next"
+  github_repository = "urbasolar/next-demo"
+  # Repo à ids immuables : gh api repos/urbasolar/next-demo/actions/oidc/customization/sub
+  github_subject_prefix = "repo:urbasolar@117671298/next-demo@1417348057"
+  environments          = ["dev"]
+  acr_id                = module.acr.id
+  deploy_scope_ids      = [module.app_next.id]
+  secrets_kv_id         = data.azurerm_key_vault.factory.id
+}
+
+output "app_next" {
+  value = {
+    fqdn          = module.app_next.fqdn
+    key_vault_uri = module.app_next.key_vault_uri
+    acr           = module.acr.login_server
+    client_id     = module.app_registration_next.client_id
+    name          = "next-dev"
+    acr_name      = "acraifactorysbx"
+    rg_name       = azurerm_resource_group.this.name
+  }
+}

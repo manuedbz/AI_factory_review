@@ -3,7 +3,7 @@
 # main protégée (-> prod, désactivé), fichiers de templates/front/, environnement "dev" et ses variables
 # (valeurs issues des sorties Terraform + Key Vault de la factory).
 #
-# Usage : [TEMPLATE_REPO=urbasolar/template-next-factory] scripts/create-github-repo.sh <owner/repo> [--dry-run]
+# Usage : [TEMPLATE_REPO=urbasolar/template-next-factory] [TF_OUTPUT=app_next] scripts/create-github-repo.sh <owner/repo> [--dry-run]
 # Pré-requis : gh connecté, az connecté, terraform appliqué dans terraform/examples/sandbox
 set -euo pipefail
 
@@ -20,7 +20,8 @@ run() { if [ "$DRY" = "--dry-run" ]; then echo "[dry-run] $*"; else "$@"; fi; }
 
 # shellcheck disable=SC1091
 source "$ROOT/scripts/load-env.sh" >/dev/null
-OUT=$(terraform -chdir="$TF_DIR" output -json app)
+# TF_OUTPUT : sortie Terraform de l'app (app, app_next...)
+OUT=$(terraform -chdir="$TF_DIR" output -json "${TF_OUTPUT:-app}")
 get() { echo "$OUT" | python3 -c "import sys,json;print(json.load(sys.stdin)['$1'])"; }
 
 # Paires NOM=valeur (compatible bash 3.2 de macOS : pas de tableaux associatifs)
@@ -46,7 +47,8 @@ else
     done
     gh api "repos/$REPO/contents/package.json" --silent || { echo "Template non copié dans $REPO" >&2; exit 1; }
     gh repo clone "$REPO" "$WORK" -- -q
-    git -C "$WORK" checkout -q -b develop
+    # Certains templates (template-next-factory) ont déjà develop par défaut
+    git -C "$WORK" checkout -q develop 2>/dev/null || git -C "$WORK" checkout -q -b develop
     # template-next-factory embarque déjà Dockerfile et pipelines ; le front reçoit ceux de templates/front
     case "$TEMPLATE" in
       *template-next-factory*) ;;
@@ -59,6 +61,9 @@ else
     git -C "$WORK" commit -q --allow-empty -m "feat: add Docker build and Azure deployment pipelines"
     git -C "$WORK" push -q -u origin develop
     gh repo edit "$REPO" --default-branch develop
+    # Seule la branche par défaut du template est copiée : créer main si absente
+    gh api "repos/$REPO/branches/main" --silent 2>/dev/null || \
+      gh api -X POST "repos/$REPO/git/refs" --silent -f ref=refs/heads/main -f sha="$(git -C "$WORK" rev-parse HEAD)"
     # main protégée : PR obligatoire (1 approbation), pas de force-push
     gh api -X PUT "repos/$REPO/branches/main/protection" --silent --input - <<JSON
 {"required_status_checks":null,"enforce_admins":false,

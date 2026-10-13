@@ -97,6 +97,16 @@ Contraintes :
 
 Après ces corrections, le pipeline `develop` est entièrement vert : lint, tests, OIDC, lecture du `.npmrc` dans le KV, build/push ACR, `az containerapp update`. L'app répond 200 avec l'image taguée par le SHA et la config runtime injectée.
 
+### Premier déploiement du template Next (`urbasolar/next-demo`, 13/10)
+
+| Constat | Traitement |
+|---|---|
+| Container App en port 3000 avec l'image de démo (port 80) : la révision reste « Activating », Terraform attend | Image bootstrap poussée à la main au premier apply. **À industrialiser** (image de démo écoutant sur le port cible, ou `target_port` de démo puis bascule) |
+| Seule la branche par défaut du template (`develop`) est copiée : pas de `main` | Le script crée `main` depuis `develop` et accepte un `develop` existant |
+| Rôle Entra « Application Administrator » activé par PIM : 403 à la création de l'App Registration une fois l'activation expirée | Réactiver le rôle PIM avant `terraform apply` |
+
+Résultat : lint, tests, OIDC, build/push ACR, `containerapp update` verts ; `NEXT_PUBLIC_APP_NAME` lu dans le KV et injecté au démarrage.
+
 ## Ce que l'usine crée côté GitHub
 
 | Élément | Détail |
