@@ -72,3 +72,12 @@ Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CER
 - Container Registry (ACR).
 - Script d'usine unifié (Azure + GitHub).
 - Éléments « nice to have » du schéma Lucid.
+
+## Scripts
+
+| Script | Rôle |
+|---|---|
+| `scripts/create-github-repo.sh <owner/repo> [--dry-run]` | Crée le repo depuis le template, l'environnement `dev` et ses variables (sorties Terraform + Key Vault). Dry-run testé. |
+| `scripts/destroy-test.sh [owner/repo]` | Efface les ressources de test en 3 étapes (Azure, repo GitHub, bootstrap optionnel), chacune validée par « oui » |
+
+ACR + App Registration appliqués sur la sandbox (8 créations, 1 modification).

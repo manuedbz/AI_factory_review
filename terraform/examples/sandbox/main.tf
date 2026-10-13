@@ -125,5 +125,8 @@ output "app" {
     key_vault_uri = module.app.key_vault_uri
     acr           = module.acr.login_server
     client_id     = module.app_registration.client_id
+    name          = "report-dev"
+    acr_name      = "acraifactorysbx"
+    rg_name       = azurerm_resource_group.this.name
   }
 }
