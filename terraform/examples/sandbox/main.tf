@@ -127,11 +127,13 @@ module "app_registration" {
   source = "../../modules/app-registration"
 
   name              = "report"
-  github_repository = "urbasolar/report-demo" # seul le nom compte pour la confiance OIDC
-  environments      = ["dev"]
-  acr_id            = module.acr.id
-  deploy_scope_ids  = [module.app.id]
-  secrets_kv_id     = data.azurerm_key_vault.factory.id
+  github_repository = "urbasolar/report-demo"
+  # Repo à ids immuables : gh api repos/urbasolar/report-demo/actions/oidc/customization/sub
+  github_subject_prefix = "repo:urbasolar@117671298/report-demo@1416984271"
+  environments          = ["dev"]
+  acr_id                = module.acr.id
+  deploy_scope_ids      = [module.app.id]
+  secrets_kv_id         = data.azurerm_key_vault.factory.id
 }
 
 output "app" {

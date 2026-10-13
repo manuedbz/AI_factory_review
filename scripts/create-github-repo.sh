@@ -75,3 +75,6 @@ done
 echo "Repo : https://github.com/$REPO"
 echo "Variables posées sur l'environnement dev : $(printf "%s " "${VARS[@]%%=*}")"
 echo "Secrets/variables d'organisation requis pour lint/tests : voir docs/03-github.md."
+if [ "$DRY" != "--dry-run" ]; then
+  echo "Préfixe OIDC (variable Terraform github_subject_prefix) : $(gh api "repos/$REPO/actions/oidc/customization/sub" -q .sub_claim_prefix 2>/dev/null || echo 'repo:'"$REPO")"
+fi

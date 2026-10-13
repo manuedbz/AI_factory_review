@@ -28,6 +28,16 @@ variable "github_repository" {
   }
 }
 
+variable "github_subject_prefix" {
+  type        = string
+  description = <<-EOT
+    Préfixe du claim OIDC 'sub' émis par GitHub. null = "repo:<owner/repo>".
+    Les repos récents utilisent des ids immuables ("repo:owner@<id>/repo@<id>") :
+    gh api repos/<owner/repo>/actions/oidc/customization/sub -q .sub_claim_prefix
+  EOT
+  default     = null
+}
+
 variable "environments" {
   type        = set(string)
   description = "Environnements GitHub autorisés (un credential fédéré chacun)."
@@ -73,7 +83,7 @@ resource "azuread_application_federated_identity_credential" "github" {
   description    = "GitHub Actions, environnement ${each.key}"
   issuer         = "https://token.actions.githubusercontent.com"
   audiences      = ["api://AzureADTokenExchange"]
-  subject        = "repo:${var.github_repository}:environment:${each.key}"
+  subject        = "${coalesce(var.github_subject_prefix, "repo:${var.github_repository}")}:environment:${each.key}"
 }
 
 resource "azurerm_role_assignment" "acr_push" {

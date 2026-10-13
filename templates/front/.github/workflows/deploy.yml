@@ -46,7 +46,8 @@ jobs:
     # develop -> dev ; main -> prod (désactivé tant que la variable de repo PROD_ENABLED n'est pas "true")
     # release est ignoré sur develop : !failure() évite que cela bloque le déploiement
     if: ${{ !cancelled() && !failure() && (github.ref_name == 'develop' || vars.PROD_ENABLED == 'true') }}
-    runs-on: ubuntu-latest
+    # Runner Urbasolar obligatoire : le registre npm privé refuse (403) les IP des runners GitHub
+    runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     env:
       # Variables de l'environnement GitHub "dev" (posées par l'usine)

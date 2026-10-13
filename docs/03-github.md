@@ -78,7 +78,7 @@ Vérifié : `yarn install --frozen-lockfile` + `yarn build`, syntaxe YAML, **bui
 
 Contraintes :
 - `common-pipelines` est privé et limité aux repos de l'organisation `urbasolar` : ces workflows **ne fonctionnent pas** dans un repo personnel (ex. `manuedbz/report-demo`). Il faut tester dans l'organisation.
-- Ils utilisent le runner `urbasolar-azure-core-runner` et des secrets/variables d'organisation (`NPM_REGISTRY_*`, `REPO_CONTENTS_RETRIEVER_*`). La variable de repo `CI_RUNNER` remplace le runner (ex. `ubuntu-latest`).
+- Ils utilisent le runner `urbasolar-azure-core-runner` et des secrets/variables d'organisation (`NPM_REGISTRY_*`, `REPO_CONTENTS_RETRIEVER_*`). La variable de repo `CI_RUNNER` remplace le runner (attention : `ubuntu-latest` reçoit un 403 du registre npm privé).
 - Le flux de branches diffère : monitor-front déploie `develop` -> dev et `main` -> preprod ; le template déploie `main` -> dev (pas de prod pour le moment).
 - Le lint/les tests ne reçoivent pas la config du KV (pas de connexion Azure) : ils tournent avec les secrets d'organisation, comme monitor-front.
 
@@ -89,11 +89,13 @@ Contraintes :
 | `do-test` exige `deploy/env.template` (action `format-env` : `envsubst` -> `.env`, **affiché dans les logs**) | Fichier minimal ajouté au template, sans valeur secrète |
 | Le `yarn.lock` du template pointe vers `npm-proxy`, le jeton de lecture des pipelines ne couvre que `npm-group` : 401 au `yarn install` | `create-github-repo.sh` réécrit les URLs en `npm-group` (même contenu, vérifié). **Correction à reporter dans `urbasolar/template-urba-front`** |
 | Le repo issu du template est rempli en différé | Le script attend la présence de `package.json` avant de cloner |
-| `yarn lint` échoue sur le code du template (règle `import/no-duplicates` : « typescript with invalid interface loaded as resolver », variables inutilisées, `any`) | **Défaut du template** à corriger (PR) |
-| 1 test du template échoue en CI (`authentication.test.ts` : « should export msalInstance »), 162 passent | **Défaut du template** (probablement dépend des variables `VITE_*` absentes en CI) |
+| `yarn lint` échoue sur le code du template (règle `import/no-duplicates` : « typescript with invalid interface loaded as resolver », variables inutilisées, `any`) | Corrigé : PR [urbasolar/template-urba-front#7](https://github.com/urbasolar/template-urba-front/pull/7). Le résolveur `eslint-import-resolver-typescript` n'est pas installable (dépendances absentes du registre privé) : résolveur `node` avec extensions TS |
+| 1 test du template échoue en CI (`authentication.test.ts` : « should export msalInstance »), 162 passent | Corrigé dans la même PR (163/163) |
 | Dependabot/Renovate : PR « Configure Renovate » créée par l'organisation, son titre ne respecte pas le format du contrôle de titre | Ignorer ou renommer |
+| OIDC : `AADSTS700213 No matching federated identity record`. Les nouveaux repos émettent un `sub` à ids immuables : `repo:urbasolar@<id-org>/report-demo@<id-repo>:environment:dev` | Variable `github_subject_prefix` du module `app-registration`, valeur lue par `gh api repos/<owner/repo>/actions/oidc/customization/sub -q .sub_claim_prefix` |
+| `yarn install` dans le build Docker : **403** du registre npm privé depuis `ubuntu-latest` (IP des runners GitHub refusées) | Le job `deploy` tourne sur `urbasolar-azure-core-runner` (qui a `docker` et `az`), comme `do-build-docker` |
 
-Tant que lint et tests du template échouent, le job `deploy` (qui en dépend) est ignoré : le chemin de déploiement Azure (OIDC, lecture du KV, push ACR, `az containerapp update`) n'est pas encore éprouvé.
+Après ces corrections, le pipeline `develop` est entièrement vert : lint, tests, OIDC, lecture du `.npmrc` dans le KV, build/push ACR, `az containerapp update`. L'app répond 200 avec l'image taguée par le SHA et la config runtime injectée.
 
 ## Ce que l'usine crée côté GitHub
 
