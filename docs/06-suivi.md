@@ -16,11 +16,13 @@ Légende : ✅ fait · 🔄 en cours · ⬜ à faire
 
 | Statut | Tâche |
 |---|---|
-| ⬜ | Squelette du module (`main.tf`, `variables.tf`, `outputs.tf`) |
-| ⬜ | Key Vault |
-| ⬜ | Container Apps Environment (prérequis) + Container App |
-| ⬜ | Enregistrement DNS (zone privée `rg-dns`) |
-| ⬜ | `terraform validate` puis `plan` sur SandBox |
+| ✅ | Squelette du module (`terraform/modules/app`) |
+| ✅ | Key Vault (RBAC) |
+| ✅ | Container App (+ environnement dans l'exemple sandbox) |
+| ✅ | Enregistrement DNS (CNAME privé, optionnel) |
+| ✅ | `terraform validate` |
+| ⬜ | Choix de la zone DNS privée |
+| ⬜ | `plan` puis `apply` sur SandBox |
 
 ## Côté GitHub
 
