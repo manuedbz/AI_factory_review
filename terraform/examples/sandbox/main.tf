@@ -16,7 +16,8 @@ variable "subscription_id" {
 
 variable "dns_subscription_id" {
   type        = string
-  description = "Souscription portant la zone DNS (IT-Management)."
+  description = "Souscription portant la zone DNS (IT-Management). Optionnel tant que dns n'est pas activé."
+  default     = null
 }
 
 variable "tenant_id" {
@@ -32,7 +33,7 @@ provider "azurerm" {
 provider "azurerm" {
   alias           = "dns"
   tenant_id       = var.tenant_id
-  subscription_id = var.dns_subscription_id
+  subscription_id = coalesce(var.dns_subscription_id, var.subscription_id)
   features {}
 }
 
