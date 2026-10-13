@@ -12,7 +12,7 @@ Chaque nouvelle app part d'un **repo template GitHub** (étape ② du tableau bl
 |---|---|
 | Stack | React 18 + TypeScript + Vite, MUI, Zustand, React Query, i18next, PWA, Yarn |
 | Authentification | MSAL (Azure AD), désactivable (`VITE_ENABLE_AUTH`) |
-| Configuration | Variables `VITE_*` (`VITE_AZURE_CLIENT_ID`, `VITE_AZURE_TENANT_ID`, `VITE_AZURE_REDIRECT_URI`, `VITE_API_BASE_URL`…) |
+| Configuration | Variables `VITE_*` (`VITE_TENANT_ID`, `VITE_FRONT_CLIENT_ID`, `VITE_API_CLIENT_ID`, `VITE_REDIRECT_URI`, `VITE_API_BASE_URL`, `VITE_ENABLE_AUTH`…) |
 | Assistance IA | `.github/instructions/copilot.instructions.md`, prompts `clean-template` et `sidebar-config` |
 | Documentation | `docs/` (architecture, routing, i18n, API…) |
 | CI | Seulement `.gitlab-ci.yml.example` (GitLab) |
@@ -21,22 +21,36 @@ Chaque nouvelle app part d'un **repo template GitHub** (étape ② du tableau bl
 
 | Manque | Conséquence |
 |---|---|
-| Pas de `Dockerfile` | Impossible de construire l'image pour la Container App. Prévoir un build multi-étapes (build Vite puis serveur statique, ex. nginx sur le port 80, valeur par défaut `target_port` du module) |
-| Pas de workflow GitHub Actions | Écrire `deploy.yml` (build, push ACR, déploiement) |
-| Variables `VITE_*` figées au build | Les valeurs par environnement (client id, API) sont intégrées au build : les passer en arguments de build, ou charger une config au démarrage |
+| Pas de `Dockerfile` | **Fait (brouillon)** : `templates/front/` (build multi-étapes, nginx port 80 = `target_port` du module) |
+| Pas de workflow GitHub Actions | **Fait (brouillon)** : `templates/front/.github/workflows/deploy.yml` |
+| Variables `VITE_*` figées au build | Passées en `--build-arg` depuis les variables de l'environnement GitHub. Limite : changer une valeur demande un nouveau build |
 | CI GitLab uniquement | L'exemple ne sert que d'inspiration |
 | Nettoyage manuel | `@workspace #clean-template` (Copilot Chat) à lancer une fois par nouveau projet : à intégrer ou remplacer dans le script d'usine |
 
-## Deux rôles distincts pour l'App Registration
+## Plusieurs App Registrations (décision D-008)
 
-Le tableau blanc parle d'une seule « App Reg ». Le template montre qu'il en faut deux usages :
+Le tableau blanc parle d'une seule « App Reg ». Le template montre que les usages sont distincts, avec des droits séparés :
 
-| Usage | Rôle | Où est-ce géré ? |
-|---|---|---|
-| **Pipeline** | Permet à GitHub Actions de pousser l'image et déployer (OIDC) | Module `terraform/modules/app-registration` (fait) |
-| **Connexion utilisateur** | Identité MSAL de la SPA (`VITE_AZURE_CLIENT_ID`), avec URI de redirection de l'app | A faire : redirect URI = URL de l'app, rôles/permissions |
+| Usage | Rôle | Variable | Gestion |
+|---|---|---|---|
+| **Pipeline** | GitHub Actions pousse l'image et déploie (OIDC) | `AZURE_CLIENT_ID` (environnement GitHub) | Module `terraform/modules/app-registration` (fait) |
+| **Front** | Connexion des utilisateurs (MSAL), avec URI de redirection = URL de l'app | `VITE_FRONT_CLIENT_ID` | A faire |
+| **API** | Identité exposée par le back, pour les jetons | `VITE_API_CLIENT_ID` | A faire (si l'app a un back) |
 
-A décider : une seule App Registration pour les deux, ou deux séparées (recommandé : séparées, droits distincts).
+## Fichiers prêts pour le template (brouillon)
+
+Dossier `templates/front/` de ce repo, à copier à la racine du template :
+
+| Fichier | Rôle |
+|---|---|
+| `Dockerfile` | Build Vite (`yarn build`) puis nginx |
+| `nginx.conf` | Routage SPA, cache long sur `/assets/`, pas de cache sur `index.html` |
+| `.dockerignore` | Exclut `node_modules`, `.env*`, docs |
+| `.github/workflows/deploy.yml` | Connexion OIDC, build/push ACR, `az containerapp update` |
+
+Variables à poser dans l'environnement GitHub `dev` : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ACR_NAME`, `AZURE_RESOURCE_GROUP`, `CONTAINER_APP_NAME`, et les `VITE_*` (`VITE_ENABLE_AUTH`, `VITE_TENANT_ID`, `VITE_FRONT_CLIENT_ID`, `VITE_API_CLIENT_ID`, `VITE_API_BASE_URL`, `VITE_REDIRECT_URI`).
+
+Vérifié : `yarn install --frozen-lockfile` + `yarn build` sur le template, et syntaxe YAML. **Non vérifié** : build de l'image Docker (daemon arrêté), nginx, workflow sur GitHub.
 
 ## Ce que l'usine crée côté GitHub
 
@@ -54,3 +68,4 @@ A décider : une seule App Registration pour les deux, ou deux séparées (recom
 - Organisation cible : `urbasolar` (le template y est) ; repo de test à créer là ou en personnel ?
 - Connexions « INT » du tableau blanc (base de données…) : liste et paramétrage à préciser.
 - Faut-il garder le template front pour l'usine ou créer le template Next.js du tableau blanc ?
+- Appliquer les fichiers de `templates/front/` au repo `urbasolar/template-urba-front` (PR) : à valider.

@@ -59,8 +59,11 @@ Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CER
 | Statut | Tâche |
 |---|---|
 | ✅ | Template de départ identifié : `urbasolar/template-urba-front` (analysé, écarts documentés dans 03) |
-| ⬜ | `Dockerfile` + `deploy.yml` pour le template |
-| ⬜ | Décision : une ou deux App Registrations (pipeline / connexion MSAL) |
+| ✅ | Brouillon `Dockerfile` + `nginx.conf` + `deploy.yml` (`templates/front/`), build `yarn` vérifié |
+| ⬜ | Tester le build Docker (démarrer Docker) et le workflow sur un repo de test |
+| ⬜ | PR vers `urbasolar/template-urba-front` |
+| ✅ | Décision : App Registrations séparées (D-008) |
+| ⬜ | Modules App Registration front et API (redirect URI, scopes) |
 | ⬜ | Script de création de repo |
 
 ## Étapes suivantes

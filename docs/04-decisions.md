@@ -35,3 +35,9 @@ Journal des décisions d'architecture (la plus récente en bas).
 - **Date** : 2026-10-13
 - **Décision** : utiliser `urbasolar/template-urba-front` comme base, en attendant le template cible de l'usine.
 - **Conséquence** : ajouter Dockerfile et workflow `deploy.yml` (absents du template).
+
+## D-008 - App Registrations séparées par usage
+- **Date** : 2026-10-13
+- **Décision** : une App Registration pour le pipeline (OIDC) distincte de celles de connexion utilisateur (front, API).
+- **Pourquoi** : droits différents (déployer vs authentifier), une compromission du front n'ouvre pas l'accès au déploiement.
+- **Constat** : le template utilise `VITE_FRONT_CLIENT_ID` et `VITE_API_CLIENT_ID`.

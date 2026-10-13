@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Le déploiement ne tourne jamais en parallèle pour un même environnement
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # jeton OIDC pour azure/login
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      # Variables de l'environnement GitHub "dev" (posées par l'usine)
+      ACR_NAME: ${{ vars.ACR_NAME }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      CONTAINER_APP: ${{ vars.CONTAINER_APP_NAME }}
+      IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connexion Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Connexion à l'ACR
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build et push de l'image
+        run: |
+          docker build \
+            --build-arg VITE_ENABLE_AUTH="${{ vars.VITE_ENABLE_AUTH }}" \
+            --build-arg VITE_TENANT_ID="${{ vars.VITE_TENANT_ID }}" \
+            --build-arg VITE_FRONT_CLIENT_ID="${{ vars.VITE_FRONT_CLIENT_ID }}" \
+            --build-arg VITE_API_CLIENT_ID="${{ vars.VITE_API_CLIENT_ID }}" \
+            --build-arg VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
+            --build-arg VITE_REDIRECT_URI="${{ vars.VITE_REDIRECT_URI }}" \
+            --build-arg VITE_BUILD_NUMBER="${{ github.run_number }}" \
+            --build-arg VITE_BUILD_COMMIT="${{ github.sha }}" \
+            --build-arg VITE_BUILD_BRANCH="${{ github.ref_name }}" \
+            --build-arg VITE_BUILD_ENV="dev" \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Déploiement sur la Container App
+        run: |
+          az containerapp update \
+            --name "$CONTAINER_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "$IMAGE"
