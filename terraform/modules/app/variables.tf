@@ -89,3 +89,12 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+variable "acr" {
+  type = object({
+    id           = string
+    login_server = string
+  })
+  description = "ACR privé d'où l'app tire son image. null = pas de registry (image publique)."
+  default     = null
+}

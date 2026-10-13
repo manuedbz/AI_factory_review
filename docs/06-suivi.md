@@ -43,6 +43,17 @@ Légende : ✅ fait · 🔄 en cours · ⬜ à faire
 
 Note poste de dev : derrière Cloudflare WARP, `az keyvault` peut échouer (`CERTIFICATE_VERIFY_FAILED`) si `REQUESTS_CA_BUNDLE` ne contient pas le certificat Cloudflare. Pointer vers un bundle qui l'inclut.
 
+## ACR et App Registration (SandBox)
+
+| Statut | Tâche |
+|---|---|
+| ✅ | Module `acr` (Basic, admin désactivé, accès par identité) |
+| ✅ | Module `app-registration` (App + SP, credential fédéré GitHub OIDC, AcrPush, Contributor ciblé) |
+| ✅ | Module `app` : identité dédiée AcrPull pour tirer l'image depuis l'ACR |
+| ✅ | `plan` propre : 8 créations, 1 modification, 0 suppression |
+| ⬜ | `apply` (en attente de validation) |
+| ⬜ | Poser `AZURE_CLIENT_ID` / tenant / souscription dans le repo GitHub |
+
 ## Côté GitHub
 
 | Statut | Tâche |

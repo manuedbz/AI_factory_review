@@ -28,6 +28,31 @@ resource "azurerm_key_vault" "this" {
 }
 
 # ---------------------------------------------------------------
+# Identité de pull ACR : doit exister avec son rôle AcrPull avant la
+# Container App (une identité système n'existe qu'après sa création)
+# ---------------------------------------------------------------
+resource "azurerm_user_assigned_identity" "pull" {
+  count = var.acr != null ? 1 : 0
+
+  name                = "id-${local.app_name}-acrpull"
+  location            = var.location
+  resource_group_name = var.rg_name
+  tags                = local.tags
+
+  lifecycle {
+    ignore_changes = [tags["createdAt"], tags["updatedAt"], tags["env"], tags["Env"]]
+  }
+}
+
+resource "azurerm_role_assignment" "acr_pull" {
+  count = var.acr != null ? 1 : 0
+
+  scope                = var.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_user_assigned_identity.pull[0].principal_id
+}
+
+# ---------------------------------------------------------------
 # Container App
 # ---------------------------------------------------------------
 resource "azurerm_container_app" "this" {
@@ -37,7 +62,16 @@ resource "azurerm_container_app" "this" {
   revision_mode                = "Single"
 
   identity {
-    type = "SystemAssigned"
+    type         = var.acr != null ? "SystemAssigned, UserAssigned" : "SystemAssigned"
+    identity_ids = var.acr != null ? [azurerm_user_assigned_identity.pull[0].id] : null
+  }
+
+  dynamic "registry" {
+    for_each = var.acr != null ? [var.acr] : []
+    content {
+      server   = registry.value.login_server
+      identity = azurerm_user_assigned_identity.pull[0].id
+    }
   }
 
   template {
@@ -72,6 +106,8 @@ resource "azurerm_container_app" "this" {
   }
 
   tags = local.tags
+
+  depends_on = [azurerm_role_assignment.acr_pull]
 
   lifecycle {
     # Image : mise à jour ensuite par le pipeline de déploiement. Tags : ajoutés par les policies Azure
