@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Efface les ressources de TEST de la factory, étape par étape, avec validation.
-# Usage : scripts/destroy-test.sh [owner/repo]   (défaut : manuedbz/report-demo)
+# Usage : scripts/destroy-test.sh [owner/repo]   (défaut : urbasolar/report-demo)
 # Chaque étape demande de taper "oui" ; toute autre réponse l'ignore.
 # Le Key Vault de la factory (terraform/bootstrap) n'est PAS touché : il contient
 # la configuration. Voir l'étape optionnelle en bas.
 set -euo pipefail
 
-REPO="${1:-manuedbz/report-demo}"
+REPO="${1:-urbasolar/report-demo}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 confirm() { # <question>

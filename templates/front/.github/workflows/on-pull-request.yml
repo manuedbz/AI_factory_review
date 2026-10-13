@@ -3,7 +3,7 @@ run-name: pull-request - CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [develop, main]
 
 # Workflows partagés Urbasolar (repo urbasolar/common-pipelines, accessible aux repos de l'organisation).
 # Runner par défaut : celui d'Urbasolar ; la variable de repo CI_RUNNER permet de le remplacer (ex: ubuntu-latest).

@@ -2,12 +2,12 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
   workflow_dispatch:
 
 # Le déploiement ne tourne jamais en parallèle pour un même environnement
 concurrency:
-  group: deploy-dev
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -31,16 +31,30 @@ jobs:
       node-version: 22
       runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
 
-  deploy:
+  # main : semantic-release crée le tag vX.Y.Z (d'après les titres de commits feat/fix) ;
+  # secrets VERSION_MANAGER_* d'organisation requis (hérités avec secrets: inherit)
+  release:
+    if: github.ref_name == 'main'
     needs: [lint, test]
+    secrets: inherit
+    uses: urbasolar/common-pipelines/.github/workflows/do-create-release-nodejs.yaml@main
+    with:
+      runs-on: ${{ vars.CI_RUNNER || 'urbasolar-azure-core-runner' }}
+
+  deploy:
+    needs: [lint, test, release]
+    # develop -> dev ; main -> prod (désactivé tant que la variable de repo PROD_ENABLED n'est pas "true")
+    # release est ignoré sur develop : !failure() évite que cela bloque le déploiement
+    if: ${{ !cancelled() && !failure() && (github.ref_name == 'develop' || vars.PROD_ENABLED == 'true') }}
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     env:
       # Variables de l'environnement GitHub "dev" (posées par l'usine)
       ACR_NAME: ${{ vars.ACR_NAME }}
       RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       CONTAINER_APP: ${{ vars.CONTAINER_APP_NAME }}
-      IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ github.sha }}
+      # develop : SHA du commit ; main : version créée par semantic-release
+      IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/${{ github.event.repository.name }}:${{ needs.release.outputs.released_version || github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +83,7 @@ jobs:
             --build-arg VITE_BUILD_NUMBER="${{ github.run_number }}" \
             --build-arg VITE_BUILD_COMMIT="${{ github.sha }}" \
             --build-arg VITE_BUILD_BRANCH="${{ github.ref_name }}" \
-            --build-arg VITE_BUILD_ENV="dev" \
+            --build-arg VITE_BUILD_ENV="${{ github.ref_name == 'main' && 'prod' || 'dev' }}" \
             -t "$IMAGE" .
           docker push "$IMAGE"
 
