@@ -39,10 +39,18 @@ if gh repo view "$REPO" >/dev/null 2>&1; then
 else
   run gh repo create "$REPO" --private --template "$TEMPLATE"
   if [ "$DRY" != "--dry-run" ]; then
-    # Le repo issu du template peut mettre quelques secondes à être prêt
-    for _ in 1 2 3 4 5 6; do gh repo clone "$REPO" "$WORK" -- -q 2>/dev/null && break; sleep 5; done
+    # Le contenu du template est copié en différé : attendre que package.json soit présent
+    for _ in $(seq 1 24); do
+      gh api "repos/$REPO/contents/package.json" --silent 2>/dev/null && break
+      sleep 5
+    done
+    gh api "repos/$REPO/contents/package.json" --silent || { echo "Template non copié dans $REPO" >&2; exit 1; }
+    gh repo clone "$REPO" "$WORK" -- -q
     git -C "$WORK" checkout -q -b develop
     cp -R "$ROOT/templates/front/." "$WORK/"
+    # Le yarn.lock du template pointe vers npm-proxy ; le jeton de lecture des pipelines
+    # Urbasolar ne couvre que npm-group (même contenu) : sans cela, 401 au yarn install
+    sed -i.bak 's#/repository/npm-proxy/#/repository/npm-group/#g' "$WORK/yarn.lock" && rm -f "$WORK/yarn.lock.bak"
     git -C "$WORK" add -A
     git -C "$WORK" commit -q -m "feat: add Docker build and Azure deployment pipelines"
     git -C "$WORK" push -q -u origin develop

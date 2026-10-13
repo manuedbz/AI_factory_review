@@ -82,11 +82,24 @@ Contraintes :
 - Le flux de branches diffère : monitor-front déploie `develop` -> dev et `main` -> preprod ; le template déploie `main` -> dev (pas de prod pour le moment).
 - Le lint/les tests ne reçoivent pas la config du KV (pas de connexion Azure) : ils tournent avec les secrets d'organisation, comme monitor-front.
 
+### Constats du premier run réel (`urbasolar/report-demo`, 13/10)
+
+| Constat | Traitement |
+|---|---|
+| `do-test` exige `deploy/env.template` (action `format-env` : `envsubst` -> `.env`, **affiché dans les logs**) | Fichier minimal ajouté au template, sans valeur secrète |
+| Le `yarn.lock` du template pointe vers `npm-proxy`, le jeton de lecture des pipelines ne couvre que `npm-group` : 401 au `yarn install` | `create-github-repo.sh` réécrit les URLs en `npm-group` (même contenu, vérifié). **Correction à reporter dans `urbasolar/template-urba-front`** |
+| Le repo issu du template est rempli en différé | Le script attend la présence de `package.json` avant de cloner |
+| `yarn lint` échoue sur le code du template (règle `import/no-duplicates` : « typescript with invalid interface loaded as resolver », variables inutilisées, `any`) | **Défaut du template** à corriger (PR) |
+| 1 test du template échoue en CI (`authentication.test.ts` : « should export msalInstance »), 162 passent | **Défaut du template** (probablement dépend des variables `VITE_*` absentes en CI) |
+| Dependabot/Renovate : PR « Configure Renovate » créée par l'organisation, son titre ne respecte pas le format du contrôle de titre | Ignorer ou renommer |
+
+Tant que lint et tests du template échouent, le job `deploy` (qui en dépend) est ignoré : le chemin de déploiement Azure (OIDC, lecture du KV, push ACR, `az containerapp update`) n'est pas encore éprouvé.
+
 ## Ce que l'usine crée côté GitHub
 
 | Élément | Détail |
 |---|---|
-| Repo | Créé depuis le template, nommé d'après l'app |
+| Repo | Créé dans l'organisation `urbasolar` depuis le template, privé. Branche par défaut `develop` (-> dev) ; `main` protégée (PR + 1 approbation, -> prod, désactivé) ; fichiers de `templates/front/` poussés sur `develop` |
 | Environnements | `dev` pour le moment (`prod` plus tard) |
 | Variables d'environnement | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` (sorties Terraform + Key Vault de la factory) |
 | Pipeline | `deploy.yml` : build de l'image, push ACR, déploiement Container App |
